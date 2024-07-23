@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <books>
+        <book>
+            <title>Python 2</title>
+            <author>Author1</author>
+            <publisher>Martin Y</publisher>
+            <pageCount>500</pageCount>
+            <numberOfChapters>10</numberOfChapters>
+            <chapters>
+                <chapter>
+                    <chapterNumber>1</chapterNumber>
+                    <chapterTitle>Chapter 1</chapterTitle>
+                    <pageCount>30</pageCount>
+                </chapter>
+                <chapter>
+                    <chapterNumber>2</chapterNumber>
+                    <chapterTitle>Chapter 2</chapterTitle>
+                    <pageCount>25</pageCount>
+                </chapter>
+            </chapters>
+        </book>
+        <book>
+            <title>Python 3</title>
+            <author>Author2</author>
+            <publisher>Martin Y</publisher>
+            <pageCount>400</pageCount>
+            <numberOfChapters>13</numberOfChapters>
+            <chapters>
+                <chapter>
+                    <chapterNumber>1</chapterNumber>
+                    <chapterTitle>Chapter 1</chapterTitle>
+                    <pageCount>30</pageCount>
+                </chapter>
+                <chapter>
+                    <chapterNumber>2</chapterNumber>
+                    <chapterTitle>Chapter 2</chapterTitle>
+                    <pageCount>25</pageCount>
+                </chapter>
+            </chapters>
+        </book>
+    </books>
+</root>
