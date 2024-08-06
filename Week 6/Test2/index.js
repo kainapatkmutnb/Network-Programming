@@ -13,7 +13,7 @@ io.on('connection', (socket) => {
     console.log('user disconnected');
   });
   socket.on('chat message', (msg) => {
-    io.emit('chat message', msg); // เปลี่ยนจาก socket.broadcast.emit เป็น io.emit
+    io.emit('chat message', msg); // ส่งข้อความไปยังทุกไคลเอนต์ที่เชื่อมต่ออยู่
   });
 });
 
