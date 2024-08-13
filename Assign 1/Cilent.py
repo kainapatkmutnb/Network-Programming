@@ -1,8 +1,8 @@
 import socket
 import threading
-from datetime import datetime
 from colorama import init as colorama_init
 from colorama import Fore, Style
+import datetime
 
 def receive_message(client_socket):
     while True:
@@ -11,13 +11,11 @@ def receive_message(client_socket):
             if not message:
                 print(Fore.RED + "Connection to server lost." + Style.RESET_ALL)
                 break
+            # The message will include timestamps if the server sends them
             print(message)
         except Exception as error:
             print(Fore.RED + f"Error: {error}" + Style.RESET_ALL)
             break
-
-def get_timestamp():
-    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 def main():
     colorama_init(autoreset=True)
@@ -31,35 +29,29 @@ def main():
         print(Fore.RED + f"Error connecting to the server: {error}" + Style.RESET_ALL)
         return
 
-    NAME = input("Enter your username: ")
-
     while True:
-        print("")
-        print("Available rooms:")
-        print("")
+        NAME = input("Enter your username (or type 'exit' to quit): ")
+        if NAME.lower() == 'exit':
+            print(Fore.RED + "You have exited the program." + Style.RESET_ALL)
+            client.close()
+            return
+        
+        client.send(NAME.encode('utf-8'))
 
-        # Request and display available rooms
-        client.send("rooms".encode('utf-8'))
-        rooms = client.recv(1024).decode('utf-8')
-        print(f"Rooms: {rooms}")
-
-        print("")
-        print("You can create a room or type 'exit' to quit")
-        print("")
+        # Receive and display available rooms
+        available_rooms = client.recv(1024).decode('utf-8')
+        print("\nAvailable rooms: " + available_rooms)
+        print("\nYou can create a new room or join an existing one (or type 'exit' to quit)\n")
+        print("\nType 'leave' to leave the current room\n")
 
         room = input("Enter the room name: ")
 
         if room.lower() == "exit":
             client.send(room.encode('utf-8'))
-            print(Fore.RED + "You have exited the server." + Style.RESET_ALL)
+            print(Fore.RED + "You have exited the program." + Style.RESET_ALL)
             client.close()
-            break
+            return
 
-        print("")
-        print("You can create a room or type 'leave' to leave room")
-        print("")
-
-        client.send(NAME.encode('utf-8'))
         client.send(room.encode('utf-8'))
 
         receive_thread = threading.Thread(target=receive_message, args=(client,))
@@ -77,15 +69,14 @@ def main():
             elif message.lower() == "leave":
                 client.send(message.encode('utf-8'))
                 print(Fore.YELLOW + f"{NAME} left the chat" + Style.RESET_ALL)
-                client.close()
                 receive_thread.join()
-                main()
+                client.close()
+                main()  # Restart the main function to allow re-joining
                 return
             else:
-                timestamp = get_timestamp()
-                formatted_message = f"[{timestamp}] {NAME}: {message}"
-                print(Fore.GREEN + f"{room} - {formatted_message}" + Style.RESET_ALL)
-                client.send(formatted_message.encode('utf-8'))
+                timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                print(Fore.GREEN + f"[{timestamp}] {room} - {NAME} sent message: {message}" + Style.RESET_ALL)
+                client.send(message.encode('utf-8'))
 
 if __name__ == "__main__":
     main()
