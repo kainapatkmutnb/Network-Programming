@@ -1,4 +1,4 @@
-import socket 
+import socket
 import threading
 from colorama import init as colorama_init
 from colorama import Fore, Style
@@ -27,26 +27,27 @@ def main():
         print(Fore.RED + f"Error connecting to the server: {error}" + Style.RESET_ALL)
         return
 
-    NAME = input("Enter your username: ")
-
     while True:
-        print("")
-        print("You can create a room or type 'exit' to quit")
-        print("")
+        NAME = input("Enter your username (or type 'exit' to quit): ")
+        if NAME.lower() == 'exit':
+            print(Fore.RED + "You have exited the program." + Style.RESET_ALL)
+            client.close()
+            return
+        
+        client.send(NAME.encode('utf-8'))
+
+        available_rooms = client.recv(1024).decode('utf-8')
+        print("\nAvailable rooms: " + available_rooms)
+        print("\nYou can create a new room or join an existing one (or type 'exit' to quit)\n")
 
         room = input("Enter the room name: ")
 
         if room.lower() == "exit":
             client.send(room.encode('utf-8'))
-            print(Fore.RED + "You have exited the server." + Style.RESET_ALL)
+            print(Fore.RED + "You have exited the program." + Style.RESET_ALL)
             client.close()
-            break
+            return
 
-        print("")
-        print("You can create a room or type 'leave' to leave room")
-        print("")
-
-        client.send(NAME.encode('utf-8'))
         client.send(room.encode('utf-8'))
 
         receive_thread = threading.Thread(target=receive_message, args=(client,))
