@@ -1,5 +1,6 @@
 import socket
 import threading
+from datetime import datetime
 from colorama import init as colorama_init
 from colorama import Fore, Style
 
@@ -15,6 +16,9 @@ def receive_message(client_socket):
             print(Fore.RED + f"Error: {error}" + Style.RESET_ALL)
             break
 
+def get_timestamp():
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
 def main():
     colorama_init(autoreset=True)
     server_ip = 'localhost'
@@ -27,27 +31,35 @@ def main():
         print(Fore.RED + f"Error connecting to the server: {error}" + Style.RESET_ALL)
         return
 
-    while True:
-        NAME = input("Enter your username (or type 'exit' to quit): ")
-        if NAME.lower() == 'exit':
-            print(Fore.RED + "You have exited the program." + Style.RESET_ALL)
-            client.close()
-            return
-        
-        client.send(NAME.encode('utf-8'))
+    NAME = input("Enter your username: ")
 
-        available_rooms = client.recv(1024).decode('utf-8')
-        print("\nAvailable rooms: " + available_rooms)
-        print("\nYou can create a new room or join an existing one (or type 'exit' to quit)\n")
+    while True:
+        print("")
+        print("Available rooms:")
+        print("")
+
+        # Request and display available rooms
+        client.send("rooms".encode('utf-8'))
+        rooms = client.recv(1024).decode('utf-8')
+        print(f"Rooms: {rooms}")
+
+        print("")
+        print("You can create a room or type 'exit' to quit")
+        print("")
 
         room = input("Enter the room name: ")
 
         if room.lower() == "exit":
             client.send(room.encode('utf-8'))
-            print(Fore.RED + "You have exited the program." + Style.RESET_ALL)
+            print(Fore.RED + "You have exited the server." + Style.RESET_ALL)
             client.close()
-            return
+            break
 
+        print("")
+        print("You can create a room or type 'leave' to leave room")
+        print("")
+
+        client.send(NAME.encode('utf-8'))
         client.send(room.encode('utf-8'))
 
         receive_thread = threading.Thread(target=receive_message, args=(client,))
@@ -70,8 +82,10 @@ def main():
                 main()
                 return
             else:
-                print(Fore.GREEN + f"{room} - {NAME} sent message: {message}" + Style.RESET_ALL)
-                client.send(message.encode('utf-8'))
+                timestamp = get_timestamp()
+                formatted_message = f"[{timestamp}] {NAME}: {message}"
+                print(Fore.GREEN + f"{room} - {formatted_message}" + Style.RESET_ALL)
+                client.send(formatted_message.encode('utf-8'))
 
 if __name__ == "__main__":
     main()

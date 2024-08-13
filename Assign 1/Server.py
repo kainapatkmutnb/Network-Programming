@@ -3,8 +3,6 @@ import threading
 import datetime
 from colorama import init as colorama_init
 from colorama import Fore, Style
-import signal
-import sys
 
 class ChatServer:
     def __init__(self):
@@ -25,7 +23,6 @@ class ChatServer:
                     client.send(message.encode('utf-8'))
                 except (socket.error, AttributeError) as e:
                     print(Fore.RED + f"[ERROR] Sending to room failed: {e}" + Style.RESET_ALL)
-                    client.close()
                     self.remove_client(client, r)
 
     def send_to_client(self, message, client_socket):
@@ -55,12 +52,14 @@ class ChatServer:
                     return
 
                 else:
+                    print(message)  # Display timestamped message from client
                     self.broadcast_message(client_socket, room, username, message)
             except (socket.error, AttributeError) as e:
                 print(Fore.RED + f"[ERROR] {e}" + Style.RESET_ALL)
                 break
 
-        client_socket.close()
+        if not client_socket._closed:
+            client_socket.close()
 
     def handle_leave(self, client_socket, client_address, username, room):
         leave_time = self.timestamp()
@@ -89,11 +88,12 @@ class ChatServer:
         print(Fore.RED + f"[{exit_time}] [STATUS] {username} IP {client_address} exited the program" + Style.RESET_ALL)
         self.send_to_room(Fore.RED + f"[{exit_time}] {username} exited the program" + Style.RESET_ALL, room)
         self.remove_client(client_socket, room)
-        client_socket.close()
+        if not client_socket._closed:
+            client_socket.close()
 
     def broadcast_message(self, client_socket, room, username, message):
         timestamp = self.timestamp()
-        formatted_message = f"[{timestamp}] {username}: {message}"
+        formatted_message = f"[{timestamp}] {message}"
         if room in self.rooms:
             for client, r in self.rooms[room]:
                 if client != client_socket:
@@ -107,20 +107,7 @@ class ChatServer:
     def timestamp(self):
         return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    def shutdown_server(self, signal_received, frame):
-        print(Fore.RED + "\n[STATUS] Shutting down server..." + Style.RESET_ALL)
-        if self.server:
-            self.server.close()
-        for room in self.rooms.values():
-            for client_socket, _ in room:
-                try:
-                    client_socket.close()
-                except:
-                    pass
-        sys.exit(0)
-
     def main(self):
-        signal.signal(signal.SIGINT, self.shutdown_server)  # Handle Ctrl+C
         HOST = 'localhost'
         PORT = 80
 
@@ -155,7 +142,9 @@ class ChatServer:
                 client_thread.start()
             except (socket.error, AttributeError) as e:
                 print(Fore.RED + f"[ERROR] Server encountered an issue: {e}" + Style.RESET_ALL)
-                self.shutdown_server(None, None)
+                if self.server:
+                    self.server.close()
+                break
 
 if __name__ == "__main__":
     chat_server = ChatServer()
