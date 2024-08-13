@@ -12,23 +12,27 @@ class ChatServer:
         self.server = None
 
     def remove_client(self, client_socket, room):
-        for client, r in self.rooms[room]:
-            if client == client_socket:
-                self.rooms[room].remove((client, r))
-                break
+        if room in self.rooms:
+            for client, r in self.rooms[room]:
+                if client == client_socket:
+                    self.rooms[room].remove((client, r))
+                    break
 
     def send_to_room(self, message, room):
-        for client, r in self.rooms[room]:
-            try:
-                client.send(message.encode('utf-8'))
-            except:
-                client.close()
-                self.remove_client(client, r)
+        if room in self.rooms:
+            for client, r in self.rooms[room]:
+                try:
+                    client.send(message.encode('utf-8'))
+                except (socket.error, AttributeError) as e:
+                    print(Fore.RED + f"[ERROR] Sending to room failed: {e}" + Style.RESET_ALL)
+                    client.close()
+                    self.remove_client(client, r)
 
     def send_to_client(self, message, client_socket):
         try:
             client_socket.send(message.encode('utf-8'))
-        except:
+        except (socket.error, AttributeError) as e:
+            print(Fore.RED + f"[ERROR] Sending to client failed: {e}" + Style.RESET_ALL)
             client_socket.close()
 
     def handle_client(self, client_socket, client_address, username, room):
@@ -52,7 +56,7 @@ class ChatServer:
 
                 else:
                     self.broadcast_message(client_socket, room, username, message)
-            except Exception as e:
+            except (socket.error, AttributeError) as e:
                 print(Fore.RED + f"[ERROR] {e}" + Style.RESET_ALL)
                 break
 
@@ -61,7 +65,7 @@ class ChatServer:
     def handle_leave(self, client_socket, client_address, username, room):
         leave_time = self.timestamp()
         print(Fore.YELLOW + f"[{leave_time}] [STATUS] {username} IP {client_address} left the room {room}" + Style.RESET_ALL)
-        self.send_to_room(Fore.YELLOW + f"{username} has left the room at {leave_time}" + Style.RESET_ALL, room)
+        self.send_to_room(Fore.YELLOW + f"[{leave_time}] {username} has left the room" + Style.RESET_ALL, room)
         self.remove_client(client_socket, room)
 
         # Send available rooms to the client
@@ -75,7 +79,7 @@ class ChatServer:
             self.rooms[new_room] = []
 
         self.rooms[new_room].append((client_socket, new_room))
-        self.send_to_room(Fore.GREEN + f"{username} has joined {new_room}" + Style.RESET_ALL, new_room)
+        self.send_to_room(Fore.GREEN + f"[{leave_time}] {username} has joined {new_room}" + Style.RESET_ALL, new_room)
 
         # Continue handling the client in the new room
         self.handle_client(client_socket, client_address, username, new_room)
@@ -83,19 +87,22 @@ class ChatServer:
     def handle_exit(self, client_socket, client_address, username, room):
         exit_time = self.timestamp()
         print(Fore.RED + f"[{exit_time}] [STATUS] {username} IP {client_address} exited the program" + Style.RESET_ALL)
-        self.send_to_room(Fore.RED + f"{username} exited the program at {exit_time}" + Style.RESET_ALL, room)
+        self.send_to_room(Fore.RED + f"[{exit_time}] {username} exited the program" + Style.RESET_ALL, room)
         self.remove_client(client_socket, room)
         client_socket.close()
 
     def broadcast_message(self, client_socket, room, username, message):
         timestamp = self.timestamp()
-        for client, r in self.rooms[room]:
-            if client != client_socket:
-                try:
-                    client.send(f"[{timestamp}] {username}: {message}".encode('utf-8'))
-                except:
-                    client.close()
-                    self.remove_client(client, r)
+        formatted_message = f"[{timestamp}] {username}: {message}"
+        if room in self.rooms:
+            for client, r in self.rooms[room]:
+                if client != client_socket:
+                    try:
+                        client.send(formatted_message.encode('utf-8'))
+                    except (socket.error, AttributeError) as e:
+                        print(Fore.RED + f"[ERROR] Broadcasting message failed: {e}" + Style.RESET_ALL)
+                        client.close()
+                        self.remove_client(client, r)
 
     def timestamp(self):
         return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -131,7 +138,7 @@ class ChatServer:
 
                 # Send the list of available rooms to the client
                 available_rooms = ", ".join(self.rooms.keys()) if self.rooms else "No rooms available."
-                client_socket.send(available_rooms.encode('utf-8'))
+                self.send_to_client(available_rooms, client_socket)
 
                 # Receive room name
                 room = client_socket.recv(1024).decode('utf-8')
@@ -146,7 +153,7 @@ class ChatServer:
 
                 client_thread = threading.Thread(target=self.handle_client, args=(client_socket, client_address, username, room))
                 client_thread.start()
-            except Exception as e:
+            except (socket.error, AttributeError) as e:
                 print(Fore.RED + f"[ERROR] Server encountered an issue: {e}" + Style.RESET_ALL)
                 self.shutdown_server(None, None)
 
