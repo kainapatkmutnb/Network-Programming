@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App with Video</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.0/simplepeer.min.js"></script>
+    <style>
+        .timestamp {
+            color: gray;
+            font-size: small;
+        }
+        #video-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        video {
+            width: 300px;
+            height: auto;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Application</h1>
+    <div>
+        <h2>Available Rooms</h2>
+        <ul id="roomList"></ul>
+    </div>
+    <div id="messages"></div>
+    <input id="messageInput" type="text" placeholder="Type your message here">
+    <button id="sendBtn">Send</button>
+    <button id="leaveBtn">Leave Room</button>
+    <button id="videoBtn">Start Video</button>
+    <button id="stopVideoBtn">Stop Video</button>
+    
+    <div id="video-container">
+        <!-- Local video will be added dynamically -->
+    </div>
+
+    <script>
+        const socket = io();
+        const videoContainer = document.getElementById('video-container');
+        const messageInput = document.getElementById('messageInput');
+        const username = prompt("Enter your username:");
+        const room = prompt("Enter the room name:");
+
+        let localStream;
+        let peers = {};  // Dictionary to keep track of peer connections
+
+        socket.emit('join', {username, room});
+
+        document.getElementById('sendBtn').addEventListener('click', function() {
+            sendMessage();
+        });
+
+        messageInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();  // Prevents default Enter key behavior (e.g., form submission)
+                sendMessage();
+            }
+        });
+
+        document.getElementById('leaveBtn').addEventListener('click', function() {
+            socket.emit('leave', {username, room});
+            window.location.reload();
+        });
+
+        document.getElementById('videoBtn').addEventListener('click', startVideoChat);
+        document.getElementById('stopVideoBtn').addEventListener('click', stopVideoChat);
+
+        function sendMessage() {
+            const message = messageInput.value;
+            if (message.trim()) {
+                socket.emit('message', {username, room, message});
+                messageInput.value = '';
+            }
+        }
+
+        function startVideoChat() {
+            if (localStream) {
+                // Video chat already started
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+                localStream = stream;
+                const localVideo = document.createElement('video');
+                localVideo.srcObject = stream;
+                localVideo.autoplay = true;
+                localVideo.muted = true;
+                videoContainer.appendChild(localVideo);
+
+                // Create a peer connection for each participant
+                socket.on('video-offer', data => {
+                    const { id, signal } = data;
+                    const peer = new SimplePeer({ initiator: false, trickle: false });
+
+                    peer.on('signal', signalData => {
+                        socket.emit('video-answer', { id, signal: signalData, room });
+                    });
+
+                    peer.on('stream', stream => {
+                        const remoteVideo = document.createElement('video');
+                        remoteVideo.srcObject = stream;
+                        remoteVideo.autoplay = true;
+                        videoContainer.appendChild(remoteVideo);
+                    });
+
+                    peer.signal(signal);
+                    peers[id] = peer;
+                });
+
+                socket.on('video-answer', data => {
+                    const { id, signal } = data;
+                    const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
+
+                    peer.on('signal', signalData => {
+                        socket.emit('video-answer', { id, signal: signalData, room });
+                    });
+
+                    peer.on('stream', stream => {
+                        const remoteVideo = document.createElement('video');
+                        remoteVideo.srcObject = stream;
+                        remoteVideo.autoplay = true;
+                        videoContainer.appendChild(remoteVideo);
+                    });
+
+                    peer.signal(signal);
+                    peers[id] = peer;
+                });
+
+                socket.on('video-candidate', data => {
+                    const { id, candidate } = data;
+                    if (peers[id]) {
+                        peers[id].signal(candidate);
+                    }
+                });
+
+                socket.emit('video-offer', { id: username, room });
+            }).catch(err => {
+                console.error('Error accessing media devices.', err);
+            });
+        }
+
+        function stopVideoChat() {
+            if (!localStream) {
+                // No video chat to stop
+                return;
+            }
+
+            // Stop the local video stream
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+
+            // Close all peer connections
+            Object.values(peers).forEach(peer => peer.destroy());
+            peers = {};
+
+            // Remove all video elements
+            videoContainer.innerHTML = '';
+            socket.emit('video-stop', { room });
+        }
+
+        function updateRoomList() {
+            fetch('/rooms')
+                .then(response => response.json())
+                .then(rooms => {
+                    roomList.innerHTML = '';
+                    rooms.forEach(room => {
+                        const li = document.createElement('li');
+                        li.textContent = room;
+                        roomList.appendChild(li);
+                    });
+                });
+        }
+
+        updateRoomList();
+
+        socket.on('status', function(data) {
+            const status = document.createElement('div');
+            status.textContent = data.message;
+            document.getElementById('messages').appendChild(status);
+        });
+
+        socket.on('message', function(data) {
+            const message = document.createElement('div');
+            message.innerHTML = `<span class="timestamp">${data.timestamp}</span> ${data.username}: ${data.message}`;
+            document.getElementById('messages').appendChild(message);
+        });
+
+        socket.on('video-stop', function(data) {
+            // Handle video stop event if needed
+            videoContainer.innerHTML = '';
+        });
+    </script>
+</body>
+</html>
