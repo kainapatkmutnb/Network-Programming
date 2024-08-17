@@ -3,6 +3,6 @@ This is a Node.js server-side code that sets up an Express.js web application wi
 
 To use program 
 
-1. cd to video-chat npm install
-2. cd to src node app.js
-3. Go Web browser go to http://localhost:3000/
+1. cd to video-chat 👉🏽npm install👈🏽
+2. cd to src 👉🏽node app.js👈🏽
+3. Go Web browser go to 👉🏽http://localhost:3000/👈🏽
