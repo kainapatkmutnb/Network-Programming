@@ -1,0 +1,5 @@
+This is chat2 program
+
+main issues:
+1.Stop video : หลังจาก user1 กดหยุด user2 จะยังคงเห็นภาพสุดท้ายของ user1 ค้างในหน้าจอ
+2.Start video : การทำงานครั้งแรกปกติ การทำงานครั้งต่อมาจะเห็น video ของ user อื่นสีดำ
