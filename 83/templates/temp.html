@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temp Page</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const username = localStorage.getItem('username');
+            const room = localStorage.getItem('room');
+
+            if (!username || !room) {
+                alert('Username and room are required!');
+                window.location.href = 'login.html';
+            }
+
+            // Redirect back to index.html
+            setTimeout(() => {
+                window.location.href = 'chat';
+            }, 1000); // Delay to simulate some process or operation
+        });
+    </script>
+</head>
+<body>
+    <h1>Preparing to start video...</h1>
+</body>
+</html>
