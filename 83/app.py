@@ -75,7 +75,6 @@ def handle_leave(data):
         rooms[room].remove(username)
         if not rooms[room]:
             del rooms[room]
-
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         emit('status', {'message': f'{username} has left the room.', 'timestamp': timestamp}, room=room)
 
