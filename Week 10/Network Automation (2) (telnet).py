@@ -5,11 +5,10 @@ import time
 username = 'cisco'
 password = 'cisco'
 IP = '192.168.1.116'
-timeout = 5  # Set timeout for connection
 
 try:
     # Establish Telnet connection with automatic closure
-    with telnetlib.Telnet(IP, timeout=timeout) as tn:
+    with telnetlib.Telnet(IP) as tn:
         # Send username
         tn.read_until(b'Username: ')
         tn.write(username.encode('ascii') + b'\n')
