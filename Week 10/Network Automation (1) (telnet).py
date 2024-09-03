@@ -1,4 +1,5 @@
 import telnetlib
+import time
 
 # Configuration variables
 username = 'cisco'
